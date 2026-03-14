@@ -1,11 +1,38 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+import os
 from typing import List
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 
 app = FastAPI(
     title="Clinical Evidence Platform API",
     version="0.1.0"
+)
+
+default_allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+configured_allowed_origins = os.getenv("FRONTEND_ORIGINS")
+allowed_origins = [
+    origin.strip()
+    for origin in (
+        configured_allowed_origins.split(",")
+        if configured_allowed_origins
+        else default_allowed_origins
+    )
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
