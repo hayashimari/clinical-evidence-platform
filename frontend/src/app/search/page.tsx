@@ -10,7 +10,7 @@ function SearchWorkspaceFallback() {
   );
 }
 
-export default function Home() {
+export default function SearchPage() {
   return (
     <Suspense fallback={<SearchWorkspaceFallback />}>
       <SearchWorkspace />
