@@ -10,6 +10,8 @@ def search(db: Session, query: str, user_id: int):
             "results": []
         }
 
+    normalized_query = " ".join(query.strip().lower().split())
+
 def calculate_score(query: str, text: str) -> float:
     query_terms = query.lower().split()
     text_lower = text.lower()
@@ -60,8 +62,8 @@ def search(db: Session, query: str, user_id: int):
 
         for segment in segments:
             score = (
-                calculate_score(query, resource.title or "") +
-                calculate_score(query, resource.abstract or "") +
+                calculate_score(query, resource.title or "") * 3 +
+                calculate_score(query, resource.abstract or "") * 2 +
                 calculate_score(query, segment.content or "")
             )
 
