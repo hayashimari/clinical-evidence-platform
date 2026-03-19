@@ -8,6 +8,13 @@ from sqlalchemy.orm import Session
 from app.models import User, Resource, ResourceSegment, SearchQuery, SearchQueryResult
 from app.schemas.search import SearchRequest, SearchResponse, SearchResultItem
 
+def search(db: Session, query: str, user_id: int):
+    if not query or not query.strip():
+        return {
+            "query_id": None,
+            "total": 0,
+            "results": []
+        }
 
 def _safe_preview(text: str | None, max_len: int = 180) -> str | None:
     if not text:
