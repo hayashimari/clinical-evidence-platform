@@ -78,6 +78,7 @@ def search(db: Session, query: str, user_id: int):
 
     # 3. 정렬
     results.sort(key=lambda x: x["score"], reverse=True)
+    results = results[:5]
 
     # 4. DB 저장
     for rank, r in enumerate(results, start=1):
