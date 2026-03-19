@@ -1,9 +1,16 @@
 from sqlalchemy.orm import Session
-
 from app.models.resource import Resource, ResourceSegment
 from app.models.search_query import SearchQuery, SearchQueryResult
-from app.schemas.search import SearchResponse, SearchResultItem
 
+def search(db: Session, query: str, user_id: int):
+    if not query or not query.strip():
+        return {
+            "query_id": None,
+            "total": 0,
+            "results": []
+        }
+
+    normalized_query = " ".join(query.strip().lower().split())
 
 def calculate_score(query: str, text: str) -> float:
     query_terms = query.lower().split()
@@ -17,9 +24,6 @@ def calculate_score(query: str, text: str) -> float:
 
 
 def make_snippet(text: str, query: str) -> str:
-    if not text:
-        return ""
-
     text_lower = text.lower()
     query_terms = query.lower().split()
 
@@ -33,99 +37,78 @@ def make_snippet(text: str, query: str) -> str:
     return text[:100]
 
 
-def build_summary(query: str, total: int) -> str:
-    if total == 0:
-        return f"'{query}'와 관련된 자료를 찾지 못했습니다."
-    return f"'{query}'에 대해 총 {total}건의 결과를 찾았습니다."
-
-
-def search(db: Session, query: str, user_id: int) -> SearchResponse:
-    normalized_query = query.strip()
-    if not normalized_query:
-        return SearchResponse(
-            query_id=0,
-            summary="검색어가 비어 있습니다.",
-            total=0,
-            page=1,
-            per_page=5,
-            results=[],
-        )
-
+def search(db: Session, query: str, user_id: int):
+    # 1. 검색 기록 저장
     search_query = SearchQuery(
         user_id=user_id,
-        query_text=normalized_query,
+        query_text=query
     )
     db.add(search_query)
-    db.flush()
+    db.commit()
+    db.refresh(search_query)
 
+    # 2. resource 조회
     resources = db.query(Resource).all()
-    results: list[dict] = []
+
+    results = []
+    seen_resource_ids = set()
 
     for resource in resources:
-        base_score = (
-            calculate_score(normalized_query, resource.title or "")
-            + calculate_score(normalized_query, resource.abstract or "")
-        )
-        best_score = base_score
-        best_snippet = make_snippet(resource.abstract or resource.title or "", normalized_query)
-        matched_segment_id = None
-
         segments = db.query(ResourceSegment).filter(
             ResourceSegment.resource_id == resource.id
         ).all()
 
+        best_score = 0.0
+        best_snippet = ""
+
         for segment in segments:
-            score = base_score + calculate_score(normalized_query, segment.content or "")
+            score = (
+                calculate_score(query, resource.title or "") * 3 +
+                calculate_score(query, resource.abstract or "") * 2 +
+                calculate_score(query, segment.content or "")
+            )
+
             if score > best_score:
                 best_score = score
-                best_snippet = make_snippet(segment.content or "", normalized_query)
-                matched_segment_id = segment.id
+                best_snippet = make_snippet(segment.content or "", query)
 
-        if best_score > 0:
-            results.append(
-                {
-                    "resource": resource,
-                    "score": best_score,
-                    "snippet": best_snippet,
-                    "matched_segment_id": matched_segment_id,
-                }
-            )
+        if best_score > 0 and resource.id not in seen_resource_ids:
+            seen_resource_ids.add(resource.id)
+            results.append({
+                "resource": resource,
+                "score": best_score,
+                "snippet": best_snippet
+             })
 
-    results.sort(key=lambda item: item["score"], reverse=True)
+    # 3. 정렬
+    results.sort(key=lambda x: x["score"], reverse=True)
     results = results[:5]
 
-    for rank, result in enumerate(results, start=1):
-        db.add(
-            SearchQueryResult(
-                search_query_id=search_query.id,
-                resource_id=result["resource"].id,
-                rank=rank,
-                score=result["score"],
-                snippet=result["snippet"],
-            )
+    # 4. DB 저장
+    for rank, r in enumerate(results, start=1):
+        result_row = SearchQueryResult(
+            search_query_id=search_query.id,
+            resource_id=r["resource"].id,
+            rank=rank,
+            score=r["score"],
+            snippet=r["snippet"]
         )
+        db.add(result_row)
 
     db.commit()
 
-    response_results = [
-        SearchResultItem(
-            resource_id=result["resource"].id,
-            title=result["resource"].title,
-            resource_type=result["resource"].resource_type,
-            abstract_text=result["resource"].abstract,
-            source_url=result["resource"].source_url,
-            matched_segment_id=result["matched_segment_id"],
-            matched_text_preview=result["snippet"],
-            relevance_score=float(result["score"]),
-        )
-        for result in results
-    ]
-
-    return SearchResponse(
-        query_id=search_query.id,
-        summary=build_summary(normalized_query, len(response_results)),
-        total=len(response_results),
-        page=1,
-        per_page=5,
-        results=response_results,
-    )
+    # 5. response
+    return {
+        "query_id": search_query.id,
+        "total": len(results),
+        "results": [
+            {
+                "resource_id": r["resource"].id,
+                "title": r["resource"].title,
+                "abstract": r["resource"].abstract,
+                "score": r["score"],
+                "snippet": r["snippet"]
+            }
+            for r in results
+        ]
+    }
