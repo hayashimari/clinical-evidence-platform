@@ -1,278 +1,301 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import {
+  Bell,
+  BookOpen,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
+  Dna,
+  FileText,
   FlaskConical,
   GraduationCap,
+  HelpCircle,
   LayoutDashboard,
+  LogOut,
   Menu,
+  Microscope,
   Search,
+  Settings,
   Stethoscope,
+  User,
   X,
 } from "lucide-react";
 
-import { buttonStyles } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof Search;
-  match: (pathname: string) => boolean;
-};
-
-const NAV_ITEMS: NavItem[] = [
+const NAV_ITEMS = [
   {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    match: (pathname) => pathname.startsWith("/dashboard"),
+    section: "Main",
+    items: [
+      { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+      { icon: Search, label: "Search", path: "/search" },
+    ],
   },
   {
-    href: "/search",
-    label: "Search",
-    icon: Search,
-    match: (pathname) =>
-      pathname === "/" ||
-      pathname.startsWith("/search") ||
-      pathname.startsWith("/resource/"),
+    section: "Resources",
+    items: [
+      { icon: BookOpen, label: "Textbooks", path: "/search?type=textbook" },
+      { icon: FileText, label: "Research Papers", path: "/search?type=paper" },
+      {
+        icon: ClipboardList,
+        label: "Clinical Guidelines",
+        path: "/search?type=guideline",
+      },
+      { icon: Stethoscope, label: "Case Reports", path: "/search?type=case" },
+      {
+        icon: Microscope,
+        label: "Conference Materials",
+        path: "/search?type=conference",
+      },
+      { icon: Dna, label: "Research Data", path: "/search?type=data" },
+    ],
   },
   {
-    href: "/learning",
-    label: "Learning",
-    icon: GraduationCap,
-    match: (pathname) => pathname.startsWith("/learning"),
-  },
-  {
-    href: "/research",
-    label: "Research",
-    icon: FlaskConical,
-    match: (pathname) => pathname.startsWith("/research"),
+    section: "Tools",
+    items: [
+      { icon: GraduationCap, label: "Learning & Quiz", path: "/learning" },
+      { icon: FlaskConical, label: "Research Support", path: "/research" },
+      { icon: BookOpen, label: "Saved", path: "/search?saved=true" },
+    ],
   },
 ];
 
-function getPageMeta(pathname: string) {
-  if (pathname.startsWith("/dashboard")) {
-    return {
-      title: "Clinical Dashboard",
-      description: "Browse the workspace and jump into the evidence tools.",
-    };
-  }
-
-  if (pathname.startsWith("/resource/")) {
-    return {
-      title: "Resource Detail",
-      description: "Static detail preview based on the Figma reference layout.",
-    };
-  }
-
-  if (pathname.startsWith("/learning")) {
-    return {
-      title: "Learning & Quiz",
-      description: "Prepared UI for quiz and study workflows while API wiring is pending.",
-    };
-  }
-
-  if (pathname.startsWith("/research")) {
-    return {
-      title: "Research Support",
-      description: "Prepared UI for literature analysis and evidence synthesis workflows.",
-    };
-  }
-
-  return {
-    title: "Evidence Search",
-    description: "Your working search flow, now wrapped in the Figma-inspired interface.",
-  };
-}
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const searchQuery = searchParams.get("q") ?? "";
 
-  const pageMeta = useMemo(() => getPageMeta(pathname), [pathname]);
+  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const submittedQuery = String(formData.get("query") ?? "").trim();
+
+    if (submittedQuery) {
+      router.push(`/search?q=${encodeURIComponent(submittedQuery)}`);
+    } else {
+      router.push("/search");
+    }
+  };
+
+  const isActive = (path: string) => {
+    const basePath = path.split("?")[0];
+
+    if (path === "/") {
+      return pathname === "/" || pathname.startsWith("/dashboard");
+    }
+
+    return pathname.startsWith(basePath) && basePath !== "/";
+  };
 
   return (
-    <div className="flex min-h-screen bg-transparent">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       {mobileMenuOpen && (
         <button
-          className="fixed inset-0 z-40 bg-slate-950/35 lg:hidden"
+          type="button"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
-          aria-label="Close navigation"
+          aria-label="Close mobile navigation"
         />
       )}
 
       <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-slate-200/80 bg-white/95 backdrop-blur transition-transform duration-300 lg:static lg:translate-x-0",
-          sidebarOpen ? "w-72" : "w-20",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-        )}
+        className={`
+          fixed z-50 flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:relative lg:z-auto
+          ${sidebarOpen ? "w-60" : "w-16"}
+          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        `}
       >
-        <div className="flex h-16 items-center border-b border-slate-200/80 px-4">
+        <div className="flex h-16 items-center border-b border-slate-200 px-4">
           <Link
-            href="/search"
-            className="flex min-w-0 items-center gap-3"
+            href="/"
+            className="flex min-w-0 items-center gap-2.5"
             onClick={() => setMobileMenuOpen(false)}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
-              <Stethoscope className="h-5 w-5" />
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600">
+              <Stethoscope className="h-4 w-4 text-white" />
             </div>
             {sidebarOpen && (
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">
-                  Clinical Evidence
-                </p>
-                <p className="truncate text-xs text-teal-600">
-                  Frontend merge workspace
-                </p>
+                <span className="block truncate text-sm font-semibold text-slate-800">
+                  MedKnowledge
+                </span>
+                <span className="block truncate text-xs text-teal-600">
+                  Clinical Intelligence
+                </span>
               </div>
             )}
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-6">
-          <div className="space-y-1">
-            {sidebarOpen && (
-              <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                Workspace
-              </p>
-            )}
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = item.match(pathname);
+        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
+          {NAV_ITEMS.map((group) => (
+            <div key={group.section} className="mb-4">
+              {sidebarOpen && (
+                <p className="mb-1.5 px-2 text-xs font-medium uppercase tracking-wider text-slate-400">
+                  {group.section}
+                </p>
+              )}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition",
-                    active
-                      ? "bg-blue-50 text-blue-700 shadow-sm"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                    !sidebarOpen && "justify-center px-2",
-                  )}
-                  title={!sidebarOpen ? item.label : undefined}
-                >
-                  <Icon
-                    className={cn(
-                      "h-5 w-5 flex-shrink-0",
-                      active ? "text-blue-600" : "text-slate-400",
+                return (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    className={`
+                      group flex items-center gap-3 rounded-lg px-2 py-2 transition-all duration-150
+                      ${active ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"}
+                    `}
+                    onClick={() => setMobileMenuOpen(false)}
+                    title={!sidebarOpen ? item.label : undefined}
+                  >
+                    <Icon
+                      className={`h-4 w-4 flex-shrink-0 ${active ? "text-blue-600" : "text-slate-500 group-hover:text-slate-700"}`}
+                    />
+                    {sidebarOpen && (
+                      <>
+                        <span className="truncate text-sm">{item.label}</span>
+                        {active && (
+                          <div className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-600" />
+                        )}
+                      </>
                     )}
-                  />
-                  {sidebarOpen && (
-                    <>
-                      <span className="truncate">{item.label}</span>
-                      {active && (
-                        <span className="ml-auto h-2 w-2 rounded-full bg-blue-600" />
-                      )}
-                    </>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-4">
-            <p className="text-sm font-semibold text-slate-900">Merge strategy</p>
-            {sidebarOpen && (
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                Reuse the Figma layout and components as references while keeping
-                the current Next.js routes and FastAPI-backed search behavior.
-              </p>
-            )}
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        <div className="border-t border-slate-200/80 p-3">
-          <div
-            className={cn(
-              "flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3",
-              !sidebarOpen && "justify-center",
-            )}
+        <div className="flex-shrink-0 border-t border-slate-200 p-2">
+          <button
+            type="button"
+            className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-slate-600 transition-colors hover:bg-slate-50 ${!sidebarOpen ? "justify-center" : ""}`}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 text-sm font-semibold text-teal-700">
-              CE
+            <Settings className="h-4 w-4 flex-shrink-0 text-slate-500" />
+            {sidebarOpen && <span className="text-sm">Settings</span>}
+          </button>
+          <div
+            className={`relative flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-slate-50 ${!sidebarOpen ? "justify-center" : ""}`}
+            onClick={() => setProfileOpen((current) => !current)}
+          >
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-teal-100">
+              <span className="text-xs font-semibold text-teal-700">DR</span>
             </div>
             {sidebarOpen && (
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-slate-800">
-                  Frontend Integration
-                </p>
-                <p className="truncate text-xs text-slate-500">
-                  Next.js App Router
-                </p>
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-slate-800">
+                    Dr. Rachel Chen
+                  </p>
+                  <p className="truncate text-xs text-slate-500">
+                    Internal Medicine
+                  </p>
+                </div>
+                <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+              </>
+            )}
+            {profileOpen && sidebarOpen && (
+              <div className="absolute bottom-full left-0 right-0 z-10 mb-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <User className="h-4 w-4" /> Profile
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <HelpCircle className="h-4 w-4" /> Help
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" /> Sign out
+                </button>
               </div>
             )}
           </div>
         </div>
 
         <button
+          type="button"
           onClick={() => setSidebarOpen((current) => !current)}
-          className="absolute -right-3 top-20 hidden h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 lg:flex"
+          className="absolute -right-3 top-20 hidden h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50 lg:flex"
           aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
           {sidebarOpen ? (
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-3 w-3 text-slate-500" />
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-3 w-3 text-slate-500" />
           )}
         </button>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col lg:max-h-screen">
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-          <div className="flex min-h-16 items-center gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="z-30 flex h-16 flex-shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-4">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((current) => !current)}
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            aria-label="Open navigation"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
+
+          <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                key={searchQuery}
+                name="query"
+                type="text"
+                defaultValue={searchQuery}
+                placeholder="Search textbooks, papers, guidelines, cases..."
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-20 text-sm text-slate-800 placeholder-slate-400 transition-all focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-400 sm:inline-flex">
+                  ⌘K
+                </kbd>
+              </div>
+            </div>
+          </form>
+
+          <div className="flex flex-shrink-0 items-center gap-2">
             <button
-              onClick={() => setMobileMenuOpen((current) => !current)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 lg:hidden"
-              aria-label="Open navigation"
+              type="button"
+              className="relative rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100"
             >
-              {mobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
+              <Bell className="h-[18px] w-[18px]" />
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border-2 border-white bg-teal-500" />
             </button>
-
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-lg font-semibold text-slate-900">
-                {pageMeta.title}
-              </p>
-              <p className="truncate text-sm text-slate-500">
-                {pageMeta.description}
-              </p>
-            </div>
-
-            <div className="hidden items-center gap-2 sm:flex">
-              <Link
-                href="/search"
-                className={buttonStyles({ variant: "outline", size: "sm" })}
-              >
-                <Search className="h-4 w-4" />
-                Search
-              </Link>
-              <Link
-                href="/dashboard"
-                className={buttonStyles({ variant: "ghost", size: "sm" })}
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                Dashboard
-              </Link>
-            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/search")}
+              className="hidden items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-700 sm:flex"
+            >
+              <Search className="h-3.5 w-3.5" />
+              Advanced Search
+            </button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="px-4 py-6 sm:px-6 lg:px-8">{children}</div>
-        </main>
+        <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
