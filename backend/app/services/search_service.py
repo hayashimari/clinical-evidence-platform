@@ -2,6 +2,13 @@ from sqlalchemy.orm import Session
 from app.models.resource import Resource, ResourceSegment
 from app.models.search_query import SearchQuery, SearchQueryResult
 
+def search(db: Session, query: str, user_id: int):
+    if not query or not query.strip():
+        return {
+            "query_id": None,
+            "total": 0,
+            "results": []
+        }
 
 def calculate_score(query: str, text: str) -> float:
     query_terms = query.lower().split()
