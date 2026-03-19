@@ -51,6 +51,7 @@ def search(db: Session, query: str, user_id: int):
     resources = db.query(Resource).all()
 
     results = []
+    seen_resource_ids = set()
 
     for resource in resources:
         segments = db.query(ResourceSegment).filter(
@@ -71,12 +72,13 @@ def search(db: Session, query: str, user_id: int):
                 best_score = score
                 best_snippet = make_snippet(segment.content or "", query)
 
-        if best_score > 0:
+        if best_score > 0 and resource.id not in seen_resource_ids:
+            seen_resource_ids.add(resource.id)
             results.append({
                 "resource": resource,
                 "score": best_score,
                 "snippet": best_snippet
-            })
+             })
 
     # 3. 정렬
     results.sort(key=lambda x: x["score"], reverse=True)
