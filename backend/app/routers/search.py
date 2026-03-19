@@ -1,23 +1,17 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
-from app.schemas.search import SearchRequest, SearchResponse
-from app.services.search_service import search_clinical_evidence_service
+from app.db.session import get_db
+from app.schemas.search import SearchResponse
+from app.services.search_service import search
 
-router = APIRouter(prefix="/api/v1", tags=["search"])
-
-
-@router.get("/filters")
-def get_filters():
-    return {
-        "filters": {
-            "domestic_only": "국내 근거만 보기",
-            "include_domestic_cases": "국내 증례 포함 보기",
-            "cited_foreign_only": "국내 논문에서 인용된 해외 논문만 보기",
-            "rare_disease_expand": "희귀질환 확장 검색 보기",
-        }
-    }
+router = APIRouter(tags=["search"])
 
 
-@router.post("/search", response_model=SearchResponse)
-def search_clinical_evidence(request: SearchRequest):
-    return search_clinical_evidence_service(request)
+@router.get("/search", response_model=SearchResponse)
+def search_endpoint(
+    query: str,
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    return search(db=db, query=query, user_id=user_id)
