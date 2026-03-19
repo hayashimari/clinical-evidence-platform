@@ -1,21 +1,6 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
-
-
-class SearchFilters(BaseModel):
-    resource_types: list[str] = Field(default_factory=list)
-    specialty_id: Optional[int] = None
-    origin_region: Optional[str] = None
-    language: Optional[str] = None
-    sort: str = "relevance"
-    page: int = 1
-    per_page: int = 10
-
-
-class SearchRequest(BaseModel):
-    query: str
-    filters: SearchFilters = Field(default_factory=SearchFilters)
 
 
 class SearchResultItem(BaseModel):
@@ -32,13 +17,10 @@ class SearchResultItem(BaseModel):
     relevance_score: float
 
 
-SearchResult = SearchResultItem
-
-
 class SearchResponse(BaseModel):
-    query_id: int
+    query_id: Optional[int] = None
     summary: str
     total: int
-    page: int
-    per_page: int
-    results: list[SearchResultItem]
+    page: int = 1
+    per_page: int = 5
+    results: List[SearchResultItem] = Field(default_factory=list)
