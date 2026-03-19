@@ -1,27 +1,44 @@
-from pydantic import BaseModel
-from typing import List
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class SearchFilters(BaseModel):
-    domestic_only: bool = False
-    include_domestic_cases: bool = True
-    cited_foreign_only: bool = False
-    rare_disease_expand: bool = False
+    resource_types: list[str] = Field(default_factory=list)
+    specialty_id: Optional[int] = None
+    origin_region: Optional[str] = None
+    language: Optional[str] = None
+    sort: str = "relevance"
+    page: int = 1
+    per_page: int = 10
 
 
 class SearchRequest(BaseModel):
     query: str
-    filters: SearchFilters
+    filters: SearchFilters = Field(default_factory=SearchFilters)
 
 
-class SearchResult(BaseModel):
+class SearchResultItem(BaseModel):
+    resource_id: int
     title: str
-    source_type: str
-    origin: str
-    published_at: str
-    url: str
+    resource_type: Optional[str] = None
+    origin_region: Optional[str] = None
+    language: Optional[str] = None
+    publication_date: Optional[str] = None
+    abstract_text: Optional[str] = None
+    source_url: Optional[str] = None
+    matched_segment_id: Optional[int] = None
+    matched_text_preview: Optional[str] = None
+    relevance_score: float
+
+
+SearchResult = SearchResultItem
 
 
 class SearchResponse(BaseModel):
+    query_id: int
     summary: str
-    results: List[SearchResult]
+    total: int
+    page: int
+    per_page: int
+    results: list[SearchResultItem]
