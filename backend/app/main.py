@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.system import router as system_router
+from app.routers.search import router as search_router
 
 app = FastAPI(
     title="Clinical Evidence Platform API",
@@ -31,3 +32,4 @@ def read_root():
 
 
 app.include_router(system_router)
+app.include_router(search_router, prefix="/api/v1")
