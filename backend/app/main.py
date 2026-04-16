@@ -1,3 +1,5 @@
+# backend/app/main.py
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -31,5 +33,5 @@ def read_root():
     }
 
 
-app.include_router(system_router)
+app.include_router(system_router, prefix="/api/v1")
 app.include_router(search_router, prefix="/api/v1")
